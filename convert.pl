@@ -13,13 +13,13 @@ my %size_array    = ( "word"     =>  "WORD",
                     );
 
 my @mode_order    = ( "os", "rp_os", "con", "rp_con");
-my %mode_array    = ( "os"     =>  ["ONESHOT", "0"],
+my %mode_array    = ( "os"     =>  ["ONE_SHOT", "0"],
                       "rp_os"  =>  ["REPEATED_ONESHOT", "1"],
                       "con"    =>  ["CONTINUOUS", "0"],
                       "rp_con" =>  ["REPEATED_CONTINUOUS", "0"]
                     );
 
-my @admode_order  = ( "f2f", "f2bi","f2bd","f2bi","b2fi","b2fi","b2bd");
+my @admode_order  = ( "f2f", "f2bi","f2bd","b2fi","b2fd","b2bi","b2bd");
 my %admode_array  = ("f2f"  =>  "FIXED_TO_FIXED", 
                      "f2bi" =>  "FIXED_TO_BLOCK_INC", 
                      "f2bd" =>  "FIXED_TO_BLOCK_DEC", 
@@ -35,6 +35,7 @@ my @lines = <$fh>;
 close $fh;
 my $original_str = join "", @lines;
 
+my $includes = "";
 my $count = 0;
 
 print "----------------------------------------------------------------------\n";
@@ -44,7 +45,7 @@ foreach my $mode (@mode_order) {
 
   my @mode_list = @{$mode_array{$mode}};
   my $modename = $mode_list[0];
-  my $repeat   = $mode_list[1];
+  my $reload   = $mode_list[1];
   #print "$mode : $modename\n";
 
   foreach my $admode (@admode_order){
@@ -63,24 +64,34 @@ foreach my $mode (@mode_order) {
       my $sizename = $size_array{$size};
       #print "\t\t$sizename\n";
 
-      my $tr_name = "transaction_".$mode."_".$admode."_".$size;
+      my $tr_name = "dma_".$mode."_".$admode."_".$size;
       
       #replaces the values in place of place holders
       $str =~ s/xname/$tr_name/g;
-      $str =~ s/XSIZE/$sizename/g;
-      $str =~ s/XR/$repeat/g;
       $str =~ s/XMODE/$modename/g;
+      $str =~ s/XSIZE/$sizename/g;
+      $str =~ s/XR/$reload/g;
       $str =~ s/XAD/$admode_name/g;
-      
-      #writes the string in new files
+
+      #create file name
       my $nfile = "dma_test_".$count."_".$mode."_".$admode."_".$size.".sv";
-      print " $count : $nfile :$tr_name\n";
+      
+      #create the list of include files
+      $includes = $includes."`include \"".$nfile."\"\n";
+
+      # print the code into files
+      #print " $count : $nfile :$tr_name\n";
       open my $nfh, ">", $nfile;
       print $nfh $str;
       close $nfh;
+      chmod 0775, $nfile;
     }
   }
 }
+
+open my $incfh, ">", "includes.sv";
+print $incfh "$includes";
+close $incfh;
 
 print "                         Files generated : $count\n";
 print "----------------------------------------------------------------------\n";
